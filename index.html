@@ -1859,6 +1859,85 @@
       }
     ];
 
+    const AGENT_ARCHIVE_SEED = [
+      {
+        id: 'mine-5001',
+        customerId: 'c13',
+        type: 'email',
+        source: 'E-posta',
+        status: 'resolved',
+        assignedTo: 1,
+        agent: 'Engin Can K.',
+        date: nowMinus(21800),
+        subject: 'BTC çekim güvenlik beklemesi',
+        category: 'İşlem Sorunları',
+        subcategory: 'Kripto Yatırma/Çekme',
+        closingNote: 'VPN sinyali ve yeni cihaz bekleme süresi açıklandı, müşteri işlem takibini kabul etti.',
+        csatScore: 5,
+        surveyNote: 'Müşteri bekleme nedenini net bulduğunu iletti.',
+        messages: [
+          { sender: 'customer', time: '08:42', text: 'BTC çekimim güvenlik kontrolünde görünüyor, iptal mi olacak?' },
+          { sender: 'agent', time: '08:49', text: 'Hesabınızdaki yeni cihaz ve VPN sinyalini kontrol ediyorum. İşlem güvenlik beklemesinde, iptal görünmüyor.' },
+          { sender: 'customer', time: '08:55', text: 'Tamam, bilgilendirme için teşekkürler.' },
+          { sender: 'note', time: '08:58', text: 'Yeni cihaz bekleme süresi ve ağ onayı açıklanarak kayıt çözümlendi.' }
+        ]
+      },
+      {
+        id: 'mine-5002',
+        customerId: 'c17',
+        type: 'live_chat',
+        source: 'Canlı Destek',
+        status: 'escalated',
+        priority: 'urgent',
+        assignedTo: 1,
+        agent: 'Engin Can K.',
+        date: nowMinus(16400),
+        subject: 'USDT yanlış ağ kurtarma incelemesi',
+        category: 'İşlem Sorunları',
+        subcategory: 'Transfer Hatası',
+        closingNote: 'TxID, ağ ve alıcı adres bilgisi alındı; kurtarma uygunluğu için Finans Operasyon ekibine aktarıldı.',
+        escalation: {
+          department: 'Finans Operasyon',
+          priority: 'Çok Acil',
+          note: 'Müşteri yüksek tutarlı USDT transferini yanlış ağ ile gönderdiğini belirtti; TxID ve hedef adres alındı.',
+          agent: 'Engin Can K.',
+          category: 'Transfer Hatası',
+          subject: 'USDT yanlış ağ kurtarma incelemesi',
+          at: nowMinus(16080),
+          dateLabel: new Date(nowMinus(16080)).toLocaleString('tr-TR')
+        },
+        messages: [
+          { sender: 'customer', time: '09:55', text: 'USDT transferini yanlış ağdan göndermiş olabilirim. Kurtarma yapılabilir mi?' },
+          { sender: 'agent', time: '09:57', text: 'TxID, seçilen ağ ve alıcı adresi birlikte kontrol edeceğim. Uygunluk netleşmeden kesin iade taahhüdü veremiyoruz.' },
+          { sender: 'customer', time: '10:01', text: 'TxID ve adresi paylaştım.' },
+          { sender: 'note', time: '10:04', text: 'Finans Operasyon ekibine çok acil öncelikle eskale edildi.' }
+        ]
+      },
+      {
+        id: 'mine-5003',
+        customerId: 'c19',
+        type: 'social',
+        source: 'Sosyal Medya',
+        status: 'hold',
+        assignedTo: 1,
+        agent: 'Engin Can K.',
+        date: nowMinus(9800),
+        subject: 'KYC mention iletişim bilgisi bekliyor',
+        category: 'Hesap ve Güvenlik',
+        subcategory: 'KYC Onayı',
+        closingNote: 'Kamuya açık mention üzerinden hesap detayı paylaşılmadı; kayıtlı kanal dönüşü için iletişim bilgisi beklendi.',
+        holdReason: 'Müşteriden kayıtlı e-posta ve telefon teyidi bekleniyor.',
+        holdFollowUp: 'Bugün 16:00 sosyal medya DM kontrolü',
+        holdAgent: 'Engin Can K.',
+        holdStartedAt: nowMinus(9480),
+        messages: [
+          { sender: 'customer', time: '11:10', text: '@kriptoBorsa KYC bekliyor, kimse dönüş yapmıyor.' },
+          { sender: 'agent', time: '11:14', text: 'Hesap güvenliğiniz nedeniyle buradan detay paylaşamıyoruz. Kayıtlı e-posta veya telefon bilginizi DM üzerinden iletirseniz kontrolü başlatacağız.' },
+          { sender: 'note', time: '11:18', text: 'İletişim bilgisi gelene kadar kayıt beklemeye alındı.' }
+        ]
+      }
+    ];
+
     const KNOWLEDGE_ARTICLES = [
       { id: 'kb-1', category: 'TL İşlemleri', title: 'TL yatırma referans kontrolü', desc: 'Eksik açıklama, hatalı IBAN ve banka dönüş süreleri.', keywords: ['tl', 'yatırma', 'iban', 'banka', 'açıklama', 'referans'], detail: `Kontrol sırası: 1) Gönderen IBAN kullanıcının kayıtlı adıyla eşleşiyor mu? 2) Açıklama/referans alanı boş ya da hatalı mı? 3) Banka hareketi provizyonda mı, iade mi, manuel havuzda mı? Kayıtlı isimle uyuşmayan transferlerde müşteriye tutar, banka ve işlem saati sorulur; dekont varsa talebe eklenir. Referans eksikse finans operasyon ekranında manuel eşleştirme beklenir. Aynı tutarda birden fazla giriş varsa kesinlikle tahmini eşleştirme yapılmaz.`, customerText: 'TL yatırma işleminizi kontrol edebilmem için gönderici banka, işlem saati ve varsa dekont bilgisini paylaşmanızı rica ederim. Kayıtlı isim, IBAN ve açıklama alanı eşleştiğinde tutar hesabınıza yansıtılır; eksik bilgi varsa finans ekibi manuel kontrol sağlar.', insert: 'TL yatırma işleminizi kontrol edebilmem için gönderici banka, işlem saati ve varsa dekont bilgisini paylaşmanızı rica ederim. Kayıtlı isim, IBAN ve açıklama alanı eşleştiğinde tutar hesabınıza yansıtılır; eksik bilgi varsa finans ekibi manuel kontrol sağlar.' },
       { id: 'kb-2', category: 'TL İşlemleri', title: 'Para çekim bekleme sebepleri', desc: 'Güvenlik, banka yoğunluğu, limit ve operasyon onay kontrolleri.', keywords: ['tl', 'çekim', 'para çekim', 'beklemede', 'banka', 'limit'], detail: `Bekleyen TL çekimlerinde önce işlem durumunu ayır: kullanıcı onayı bekliyor, banka kuyruğunda, güvenlik kontrolünde, operasyon onayında veya limit nedeniyle durdu. VIP/kurumsal hesaplarda yüksek tutar manuel kontrol gerektirebilir. Müşteriye banka ve güvenlik iç kontrol detayları açılmaz; yalnızca işlem durumu ve beklenen aksiyon net verilir. Aynı gün çok sayıda çekim varsa AML/fraud sinyali kontrol edilir.`, customerText: 'Para çekim işleminiz güvenlik, limit veya banka işlem kuyruğu nedeniyle kısa süre beklemede kalabilir. İşlem durumunu kontrol ediyorum; ek bilgi ya da onay gerekirse aynı kanal üzerinden sizi net şekilde bilgilendireceğim.', insert: 'Para çekim işleminiz güvenlik, limit veya banka işlem kuyruğu nedeniyle kısa süre beklemede kalabilir. İşlem durumunu kontrol ediyorum; ek bilgi ya da onay gerekirse aynı kanal üzerinden sizi net şekilde bilgilendireceğim.' },
@@ -2475,6 +2554,9 @@
         { id: 'social', label: 'Sosyal Medya', icon: Twitter, count: counts.social },
         { type: 'heading', label: currentRole === 'manager' ? 'Yönetim' : 'Araçlar' },
         { id: 'knowledge', label: 'Bilgi Bankası', icon: BookOpen, count: 0 },
+        ...(currentRole === 'agent' ? [
+          { id: 'agentArchive', label: 'Kayıtlarım', icon: Archive, count: counts.agentArchive }
+        ] : []),
         ...(currentRole === 'manager' ? [
           { id: 'reports', label: 'Raporlama', icon: BarChart2, count: 0 },
           { id: 'qualityArchive', label: 'Kayıt & Kalite', icon: Archive, count: 0 },
@@ -4598,7 +4680,7 @@
             ? 'Merhaba, bizimle iletişime geçtiğiniz için teşekkür ederiz. Hesap güvenliğiniz nedeniyle sosyal medya üzerinden işlem detayı paylaşamıyoruz. Size telefon veya kayıtlı e-posta kanalınız üzerinden dönüş yapabilmemiz için ad soyad, kullanıcı ID ve güncel telefon/e-posta bilginizi özel mesajla paylaşmanızı rica ederiz.'
             : 'Merhaba, bizimle iletişime geçtiğiniz için teşekkür ederiz. Hesap güvenliğiniz nedeniyle sosyal medya üzerinden işlem detayı paylaşamıyoruz. Size telefon veya kayıtlı e-posta kanalınız üzerinden dönüş yapabilmemiz için ad soyad, kullanıcı ID ve güncel telefon/e-posta bilginizi bu DM üzerinden paylaşmanızı rica ederiz.';
           setDraft(contactDraft);
-          setItems(prev => prev.map(row => row.id === active.id ? { ...row, status: 'hold', contactRequested: true } : row));
+          setItems(prev => prev.map(row => row.id === active.id ? { ...row, status: 'hold', unread: 0, contactRequested: true, holdReason: 'Sosyal medya üzerinden hesap detayı paylaşılamadığı için iletişim bilgisi bekleniyor.', holdFollowUp: 'Telefon/e-posta dönüş kanalı teyidi', holdAgent: currentAgent.name, holdStartedAt: Date.now() } : row));
           addAudit('Sosyal medya iletişim bilgisi istendi', active.id, 'social', 'Sosyal medya kaydı telefon/e-posta dönüşü için beklemeye alındı');
         }
         if (action === 'link') {
@@ -5602,14 +5684,17 @@
       );
     }
 
-    function QualityArchive({ emails, chats, social, agents }) {
+    function QualityArchive({ emails, chats, social, calls = [], agents, currentAgent = null, mode = 'manager' }) {
       const closedStatuses = ['resolved', 'completed'];
       const ongoingStatuses = ['escalated', 'hold', 'waiting'];
-      const [recordScope, setRecordScope] = useState('closed');
+      const isAgentArchive = mode === 'agent';
+      const agentScopeId = currentAgent?.id ? String(currentAgent.id) : null;
+      const agentScopeName = currentAgent?.name || '';
+      const [recordScope, setRecordScope] = useState(isAgentArchive ? 'all' : 'closed');
       const [filterType, setFilterType] = useState('all');
       const [filterAgent, setFilterAgent] = useState('all');
       const [filterTeam, setFilterTeam] = useState('all');
-      const [dateFilter, setDateFilter] = useState('week');
+      const [dateFilter, setDateFilter] = useState(isAgentArchive ? 'today' : 'week');
       const [customStart, setCustomStart] = useState('');
       const [customEnd, setCustomEnd] = useState('');
       const [archiveSearch, setArchiveSearch] = useState('');
@@ -5745,10 +5830,10 @@
           ];
         };
         const build = (item, type, label, icon) => {
-          const customer = getCustomer(item.customerId);
+          const customer = type === 'phone' ? getCallCustomer(item) : getCustomer(item.customerId);
           const agent = agents.find(row => row.id === item.assignedTo);
           const resolution = item.resolution || {};
-          const sortTime = item.resolvedAt || item.endedAt || item.createdAt;
+          const sortTime = item.resolvedAt || item.endedAt || item.escalatedAt || item.holdStartedAt || item.forwardedAt || item.createdAt;
           const isClosed = closedStatuses.includes(item.status);
           const csatScore = isClosed ? Number(resolution.csatScore || item.csatScore || getDemoCsatScore(`${type}-${item.id}-${item.status}`)) : null;
           const defaultNote = item.status === 'escalated'
@@ -5768,10 +5853,10 @@
             status: item.status,
             assignedTo: item.assignedTo,
             team: agent?.team || 'Atanmamış',
-            agentName: resolution.agent || agent?.name || 'Atanmamış',
-            category: resolution.category || item.category || item.topic || label,
-            subcategory: resolution.subcategory || item.type || item.source || item.platform || '-',
-            note: resolution.note || item.note || item.body || defaultNote,
+            agentName: resolution.agent || item.escalation?.agent || item.holdAgent || item.forwardedBy || agent?.name || 'Atanmamış',
+            category: resolution.category || item.escalation?.category || item.category || item.topic || label,
+            subcategory: resolution.subcategory || item.subcategory || item.type || item.source || item.platform || '-',
+            note: resolution.note || item.escalation?.note || item.holdReason || item.forwardNote || item.note || item.body || defaultNote,
             csatScore,
             surveyNote: isClosed ? (resolution.surveyNote || item.surveyNote || getDemoSurveyNote(csatScore, item.status)) : '',
             messages: [],
@@ -5789,8 +5874,44 @@
         const ticketRecords = [
           ...emails.filter(item => [...closedStatuses, ...ongoingStatuses].includes(item.status)).map(item => build(item, 'email', 'E-Posta', Mail)),
           ...chats.filter(item => [...closedStatuses, ...ongoingStatuses].includes(item.status)).map(item => build(item, 'live_chat', 'Canlı Destek', MessageCircle)),
-          ...social.filter(item => [...closedStatuses, ...ongoingStatuses].includes(item.status)).map(item => build(item, 'social', 'Sosyal Medya', Twitter))
+          ...social.filter(item => [...closedStatuses, ...ongoingStatuses].includes(item.status)).map(item => build(item, 'social', 'Sosyal Medya', Twitter)),
+          ...calls.filter(item => [...closedStatuses, ...ongoingStatuses].includes(item.status)).map(item => build(item, 'phone', 'Telefon', Phone))
         ];
+        const agentSeedRecords = AGENT_ARCHIVE_SEED.map(item => {
+          const customer = item.type === 'phone' ? getCallCustomer(item) : getCustomer(item.customerId);
+          const agent = agents.find(row => row.id === item.assignedTo) || agents.find(row => row.name === item.agent);
+          const sortTime = parseArchiveDate(item.date);
+          const isClosed = closedStatuses.includes(item.status);
+          const record = {
+            key: `agent-seed-${item.id}`,
+            id: item.id,
+            type: item.type,
+            label: channelLabels[item.type] || item.source || 'Kayıt',
+            icon: channelMeta[item.type]?.icon || Archive,
+            customerName: customer.name,
+            customerId: customer.userId || customer.id,
+            subject: item.subject,
+            status: item.status,
+            assignedTo: item.assignedTo,
+            team: agent?.team || 'Temsilci Kayıtları',
+            agentName: item.agent || agent?.name || 'Atanmamış',
+            category: item.category,
+            subcategory: item.subcategory || item.type || '-',
+            note: item.closingNote || item.note || item.holdReason || item.escalation?.note || 'Temsilci geçmiş kaydı.',
+            csatScore: isClosed ? Number(item.csatScore || getDemoCsatScore(`agent-seed-${item.id}-${item.status}`)) : null,
+            surveyNote: isClosed ? (item.surveyNote || getDemoSurveyNote(item.csatScore, item.status)) : '',
+            messages: [],
+            date: item.date,
+            dateLabel: new Date(sortTime).toLocaleString('tr-TR'),
+            sortTime
+          };
+          const actionRecord = {
+            ...record,
+            escalation: buildEscalationInfo(item, record, agent, sortTime),
+            holdInfo: buildHoldInfo(item, record, agent, sortTime)
+          };
+          return { ...actionRecord, messages: enrichArchiveMessages(actionRecord, item.messages) };
+        });
         const historyRecords = CUSTOMER_TICKET_HISTORY.map(item => {
           const customer = getCustomer(item.customerId);
           const agent = agents.find(row => row.name === item.agent);
@@ -5807,7 +5928,7 @@
             customerId: customer.userId,
             subject: item.subject,
             status: item.status,
-            assignedTo: agent?.id || 'history',
+            assignedTo: item.assignedTo || item.agentId || agent?.id || 'history',
             team: agent?.team || 'Geçmiş Kayıt',
             agentName: item.agent,
             category: item.category,
@@ -5827,21 +5948,45 @@
           };
           return { ...actionRecord, messages: enrichArchiveMessages(actionRecord, item.messages) };
         });
-        return [...ticketRecords, ...historyRecords].sort((left, right) => right.sortTime - left.sortTime);
-      }, [emails, chats, social, agents]);
-      const closedCount = records.filter(record => closedStatuses.includes(record.status)).length;
-      const ongoingCount = records.filter(record => ongoingStatuses.includes(record.status)).length;
-      const filtered = records.filter(record => {
+        return [...ticketRecords, ...agentSeedRecords, ...historyRecords].sort((left, right) => right.sortTime - left.sortTime);
+      }, [emails, chats, social, calls, agents]);
+      const visibleRecords = isAgentArchive
+        ? records.filter(record => String(record.assignedTo) === agentScopeId || record.agentName === agentScopeName || record.escalation?.agent === agentScopeName || record.holdInfo?.agent === agentScopeName)
+        : records;
+      const closedCount = visibleRecords.filter(record => closedStatuses.includes(record.status)).length;
+      const escalatedCount = visibleRecords.filter(record => record.status === 'escalated').length;
+      const holdCount = visibleRecords.filter(record => ['hold', 'waiting'].includes(record.status)).length;
+      const ongoingCount = visibleRecords.filter(record => ongoingStatuses.includes(record.status)).length;
+      const scopeOptions = isAgentArchive
+        ? [
+            { id: 'all', label: 'Tümü', count: visibleRecords.length },
+            { id: 'closed', label: 'Çözülen', count: closedCount },
+            { id: 'escalated', label: 'Eskale', count: escalatedCount },
+            { id: 'hold', label: 'Bekleyen', count: holdCount }
+          ]
+        : [
+            { id: 'closed', label: 'Çözümlenen', count: closedCount },
+            { id: 'ongoing', label: 'Devam Eden', count: ongoingCount }
+          ];
+      const scopeToneClass = (scopeId) => {
+        if (scopeId === 'closed') return 'bg-white text-emerald-700 shadow-sm dark:bg-slate-950 dark:text-emerald-300';
+        if (scopeId === 'escalated') return 'bg-white text-red-700 shadow-sm dark:bg-slate-950 dark:text-red-300';
+        if (scopeId === 'hold' || scopeId === 'ongoing') return 'bg-white text-amber-700 shadow-sm dark:bg-slate-950 dark:text-amber-300';
+        return 'bg-white text-indigo-700 shadow-sm dark:bg-slate-950 dark:text-indigo-300';
+      };
+      const filtered = visibleRecords.filter(record => {
         if (recordScope === 'closed' && !closedStatuses.includes(record.status)) return false;
         if (recordScope === 'ongoing' && !ongoingStatuses.includes(record.status)) return false;
+        if (recordScope === 'escalated' && record.status !== 'escalated') return false;
+        if (recordScope === 'hold' && !['hold', 'waiting'].includes(record.status)) return false;
         const query = archiveSearch.trim().toLocaleLowerCase('tr-TR');
         if (query) {
           const haystack = `${record.customerName} ${record.customerId} ${record.subject} ${record.category} ${record.subcategory} ${record.agentName} ${record.team}`.toLocaleLowerCase('tr-TR');
           if (!haystack.includes(query)) return false;
         }
         if (filterType !== 'all' && record.type !== filterType && !(filterType === 'history' && record.type === 'history')) return false;
-        if (filterTeam !== 'all' && record.team !== filterTeam) return false;
-        if (filterAgent !== 'all' && String(record.assignedTo) !== filterAgent) return false;
+        if (!isAgentArchive && filterTeam !== 'all' && record.team !== filterTeam) return false;
+        if (!isAgentArchive && filterAgent !== 'all' && String(record.assignedTo) !== filterAgent) return false;
         if (archiveDateRange && (record.sortTime < archiveDateRange.start || record.sortTime > archiveDateRange.end)) return false;
         return true;
       });
@@ -5850,36 +5995,40 @@
         <div className="flex h-full bg-slate-100 dark:bg-slate-950">
           <section className="flex w-80 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
             <div className="border-b border-slate-200 p-4 dark:border-slate-800">
-              <h2 className="text-sm font-black text-slate-900 dark:text-white">Kayıt & Kalite</h2>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Kapanan kayıtlar ve devam eden aksiyon takibi</p>
-              <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
-                <button onClick={() => setRecordScope('closed')} className={cx('rounded-lg px-2 py-2 text-[11px] font-black transition', recordScope === 'closed' ? 'bg-white text-emerald-700 shadow-sm dark:bg-slate-950 dark:text-emerald-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200')}>
-                  Çözümlenen <span className="mono">({closedCount})</span>
-                </button>
-                <button onClick={() => setRecordScope('ongoing')} className={cx('rounded-lg px-2 py-2 text-[11px] font-black transition', recordScope === 'ongoing' ? 'bg-white text-amber-700 shadow-sm dark:bg-slate-950 dark:text-amber-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200')}>
-                  Devam Eden <span className="mono">({ongoingCount})</span>
-                </button>
+              <h2 className="text-sm font-black text-slate-900 dark:text-white">{isAgentArchive ? 'Kayıtlarım' : 'Kayıt & Kalite'}</h2>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{isAgentArchive ? 'Bugün çözdüğünüz, eskale ettiğiniz ve beklettiğiniz işlemler' : 'Kapanan kayıtlar ve devam eden aksiyon takibi'}</p>
+              <div className={cx('mt-4 grid gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-900', isAgentArchive ? 'grid-cols-4' : 'grid-cols-2')}>
+                {scopeOptions.map(option => (
+                  <button key={option.id} onClick={() => setRecordScope(option.id)} className={cx('rounded-lg px-1.5 py-2 text-[10px] font-black transition', recordScope === option.id ? scopeToneClass(option.id) : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200')}>
+                    {option.label} <span className="mono">({option.count})</span>
+                  </button>
+                ))}
               </div>
               <div className="relative mt-4">
                 <Icon icon={Search} size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input value={archiveSearch} onChange={(event) => setArchiveSearch(event.target.value)} placeholder="Müşteri, konu, kategori veya ekip ara..." className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs font-bold text-slate-600 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200" />
+                <input value={archiveSearch} onChange={(event) => setArchiveSearch(event.target.value)} placeholder={isAgentArchive ? 'Müşteri, konu veya kategori ara...' : 'Müşteri, konu, kategori veya ekip ara...'} className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs font-bold text-slate-600 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200" />
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <select value={filterType} onChange={(event) => setFilterType(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-600 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
                   <option value="all">Tüm Kanallar</option>
                   <option value="email">E-Posta</option>
                   <option value="live_chat">Canlı Destek</option>
+                  <option value="phone">Telefon</option>
                   <option value="social">Sosyal Medya</option>
                   <option value="history">Geçmiş</option>
                 </select>
-                <select value={filterTeam} onChange={(event) => setFilterTeam(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-600 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                  <option value="all">Tüm Ekipler</option>
-                  {TEAM_GROUPS.map(team => <option key={team} value={team}>{team}</option>)}
-                </select>
-                <select value={filterAgent} onChange={(event) => setFilterAgent(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-600 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-                  <option value="all">Tüm Temsilciler</option>
-                  {agents.map(agent => <option key={agent.id} value={agent.id}>{agent.name}</option>)}
-                </select>
+                {!isAgentArchive && (
+                  <select value={filterTeam} onChange={(event) => setFilterTeam(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-600 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                    <option value="all">Tüm Ekipler</option>
+                    {TEAM_GROUPS.map(team => <option key={team} value={team}>{team}</option>)}
+                  </select>
+                )}
+                {!isAgentArchive && (
+                  <select value={filterAgent} onChange={(event) => setFilterAgent(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-600 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                    <option value="all">Tüm Temsilciler</option>
+                    {agents.map(agent => <option key={agent.id} value={agent.id}>{agent.name}</option>)}
+                  </select>
+                )}
                 <select value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-600 outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
                   <option value="today">Bugün</option>
                   <option value="yesterday">Dün</option>
@@ -5910,7 +6059,7 @@
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-black text-slate-900 dark:text-white">{maskName(record.customerName)}</span>
                         <span className="mt-0.5 block truncate text-xs font-bold text-slate-600 dark:text-slate-300">{record.subject}</span>
-                        <span className="mt-1 block text-[10px] text-slate-400">{record.agentName} · {record.team} · {record.dateLabel}</span>
+                        <span className="mt-1 block text-[10px] text-slate-400">{isAgentArchive ? `${record.label} · ${record.dateLabel}` : `${record.agentName} · ${record.team} · ${record.dateLabel}`}</span>
                         {record.csatScore ? (
                           <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-yellow-50 px-2 py-0.5 text-[10px] font-black text-yellow-700 ring-1 ring-yellow-200 dark:bg-yellow-950/30 dark:text-yellow-300 dark:ring-yellow-800">
                             <Icon icon={Star} size={10} className="fill-current" /> CSAT {record.csatScore}/5
@@ -7860,11 +8009,15 @@
       const counts = useMemo(() => {
         const ownerId = viewingAgent?.id || (currentRole === 'agent' ? currentAgent.id : null);
         const byOwner = (item) => !ownerId || item.assignedTo === ownerId;
+        const archiveStatuses = ['resolved', 'completed', 'escalated', 'hold', 'waiting'];
+        const archiveCount = [...emails, ...chats, ...social, ...calls].filter(item => item.assignedTo === currentAgent.id && archiveStatuses.includes(item.status)).length
+          + AGENT_ARCHIVE_SEED.filter(item => item.assignedTo === currentAgent.id).length;
         return {
           email: emails.filter(byOwner).reduce((sum, item) => sum + item.unread, 0),
           chat: chats.filter(byOwner).reduce((sum, item) => sum + item.unread, 0),
           phone: calls.filter(call => byOwner(call) && ['active', 'dialing', 'ringing', 'waiting', 'missed'].includes(call.status)).length,
           social: social.filter(byOwner).reduce((sum, item) => sum + item.unread, 0),
+          agentArchive: currentRole === 'agent' ? archiveCount : 0,
           announcements: announcements.filter(item => !isAnnouncementRead(item, currentAgent.id)).length
         };
       }, [emails, chats, calls, social, announcements, currentRole, currentAgent.id, viewingAgent]);
@@ -7904,6 +8057,7 @@
         phone: 'Telefon / Çağrı',
         social: 'Sosyal Medya',
         knowledge: 'Bilgi Bankası',
+        agentArchive: 'Kayıtlarım',
         reports: 'Raporlama',
         qualityArchive: 'Kayıt & Kalite',
         announcements: 'Duyurular',
@@ -8036,7 +8190,7 @@
           ...emails.map(item => normalize(item, 'email', 'email', 'E-Posta')),
           ...chats.map(item => normalize(item, 'chat', 'live_chat', 'Canlı Destek')),
           ...social.map(item => normalize(item, 'social', 'social', 'Sosyal Medya'))
-        ].filter(item => item.assignedTo === agentId && !['resolved', 'completed'].includes(item.status));
+        ].filter(item => item.assignedTo === agentId && !['resolved', 'completed', 'escalated', 'hold', 'waiting'].includes(item.status));
       };
 
       const switchRole = (role) => {
@@ -8155,6 +8309,7 @@
           return {
             ...row,
             status: 'escalated',
+            unread: 0,
             priority: payload.priority === 'Çok Acil' ? 'urgent' : row.priority,
             escalationCount: (row.escalationCount || 0) + 1,
             escalatedAt,
@@ -8180,6 +8335,7 @@
           return {
             ...row,
             status: row.status === 'completed' ? row.status : 'hold',
+            unread: 0,
             forwardedGroup: payload.group,
             forwardNote: payload.note,
             forwardedBy: currentAgent.name,
@@ -8205,6 +8361,7 @@
           return {
             ...row,
             status: 'hold',
+            unread: 0,
             holdReason: payload.reason,
             holdFollowUp: payload.followUp,
             holdAgent: currentAgent.name,
@@ -8401,6 +8558,7 @@
                 {activeTab === 'phone' && <PhoneModule calls={calls} setCalls={setCalls} activeId={activeCallId} setActiveId={setActiveCallId} now={now} openResolve={openResolve} openEscalate={openEscalate} openForward={openForward} openLink={openLink} addAudit={addAudit} getOpenTicketsForCustomer={getOpenTicketsForCustomer} getRecentTicketsForCustomer={getRecentTicketsForCustomer} onNavigateTicket={navigateToTicket} onRequestBalance={(customer, sourceItem) => setBalanceApprovalModal({ customer, sourceItem })} balanceApprovals={balanceApprovals} currentRole={currentRole} currentAgent={currentAgent} agents={agents} viewingAgent={viewingAgent} onOpenCustomerTab={openCustomerSideTab} knowledgeArticles={knowledgeArticles} />}
                 {activeTab === 'social' && <SocialModule items={social} setItems={setSocial} activeId={activeSocialId} setActiveId={setActiveSocialId} now={now} openResolve={openResolve} openEscalate={openEscalate} openForward={openForward} openHold={openHold} openLink={openLink} openQuickAction={openQuickAction} openTemplateModal={openTemplateModal} addAudit={addAudit} getOpenTicketsForCustomer={getOpenTicketsForCustomer} getRecentTicketsForCustomer={getRecentTicketsForCustomer} onNavigateTicket={navigateToTicket} onRequestBalance={(customer, sourceItem) => setBalanceApprovalModal({ customer, sourceItem })} balanceApprovals={balanceApprovals} currentRole={currentRole} currentAgent={currentAgent} agents={agents} viewingAgent={viewingAgent} onOpenCustomerTab={openCustomerSideTab} knowledgeArticles={knowledgeArticles} />}
                 {activeTab === 'knowledge' && <KnowledgeCenter articles={knowledgeArticles} setArticles={setKnowledgeArticles} currentRole={currentRole} addAudit={addAudit} currentAgent={currentAgent} />}
+                {activeTab === 'agentArchive' && currentRole === 'agent' && <QualityArchive emails={emails} chats={chats} social={social} calls={calls} agents={agents} currentAgent={currentAgent} mode="agent" />}
                 {activeTab === 'reports' && currentRole === 'manager' && <Reports auditLog={auditLog} agents={agents} emails={emails} chats={chats} social={social} calls={calls} announcements={announcements} />}
                 {activeTab === 'qualityArchive' && currentRole === 'manager' && <QualityArchive emails={emails} chats={chats} social={social} calls={calls} agents={agents} />}
                 {activeTab === 'announcements' && <Announcements announcements={announcements} markAnnouncementRead={markAnnouncementRead} currentAgent={currentAgent} currentRole={currentRole} agents={agents} />}
