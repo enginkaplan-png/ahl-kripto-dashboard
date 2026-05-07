@@ -1939,6 +1939,18 @@
       .slice(0, 2)
       .toLocaleUpperCase('tr-TR') || 'EC';
 
+    const getDemoCsatScore = (seed = '') => {
+      const sum = String(seed).split('').reduce((total, char) => total + char.charCodeAt(0), 0);
+      return [5, 4, 5, 3, 4, 5, 4][sum % 7];
+    };
+
+    const getDemoSurveyNote = (score, status) => {
+      if (score >= 5) return 'Yanıt hızlı ve açıklayıcıydı, teşekkür ederim.';
+      if (score === 4) return 'Sorunum çözüldü, süreç hakkında verilen bilgi yeterliydi.';
+      if (status === 'escalated') return 'Konu başka ekibe aktarıldı, dönüş süresinin takip edilmesini istiyorum.';
+      return 'Yanıt aldım ancak bekleme süresi daha kısa olabilirdi.';
+    };
+
     const UNKNOWN_CUSTOMER_PROFILE = {
       id: 'unknown',
       name: 'Bilinmeyen Numara',
@@ -2465,7 +2477,7 @@
         { id: 'knowledge', label: 'Bilgi Bankası', icon: BookOpen, count: 0 },
         ...(currentRole === 'manager' ? [
           { id: 'reports', label: 'Raporlama', icon: BarChart2, count: 0 },
-          { id: 'qualityArchive', label: 'Arşiv & Kalite', icon: Archive, count: 0 },
+          { id: 'qualityArchive', label: 'Kayıt & Kalite', icon: Archive, count: 0 },
           { id: 'team', label: 'Ekip Yönetimi', icon: Users, count: 0 },
           { id: 'announcementManagement', label: 'Duyuru Yönetimi', icon: Bell, count: 0 }
         ] : []),
@@ -5591,6 +5603,9 @@
     }
 
     function QualityArchive({ emails, chats, social, agents }) {
+      const closedStatuses = ['resolved', 'completed'];
+      const ongoingStatuses = ['escalated', 'hold', 'waiting'];
+      const [recordScope, setRecordScope] = useState('closed');
       const [filterType, setFilterType] = useState('all');
       const [filterAgent, setFilterAgent] = useState('all');
       const [filterTeam, setFilterTeam] = useState('all');
@@ -5633,6 +5648,38 @@
         return null;
       }, [dateFilter, customStart, customEnd]);
       const records = useMemo(() => {
+        const inferEscalationDepartment = (record) => {
+          const text = `${record.subject || ''} ${record.category || ''} ${record.subcategory || ''} ${record.note || ''}`.toLocaleLowerCase('tr-TR');
+          if (/hukuk|dava|avukat|savcılık|şikayet/.test(text)) return 'Hukuk';
+          if (/fraud|kyc|2fa|güvenlik|şüpheli|kimlik|cihaz/.test(text)) return 'Fraud';
+          if (/api|rate|teknik|yazılım|grafik|uygulama/.test(text)) return 'Yazılım';
+          return 'Finans';
+        };
+        const buildEscalationInfo = (item, record, agent, sortTime) => {
+          if (item.status !== 'escalated' && !item.escalation) return null;
+          const data = item.escalation || {};
+          const eventTime = data.at || data.date || item.escalatedAt || sortTime;
+          const department = data.department || item.escalationDepartment || inferEscalationDepartment(record);
+          return {
+            department,
+            priority: data.priority || (item.priority === 'urgent' ? 'Çok Acil' : item.priority === 'high' ? 'Acil' : 'Normal'),
+            note: data.note || record.note || 'Eskalasyon gerekçesi kayda eklenmemiş.',
+            agent: data.agent || record.agentName || agent?.name || 'Atanmamış',
+            category: data.category || record.category || record.subject,
+            subject: data.subject || record.subject,
+            dateLabel: data.dateLabel || new Date(eventTime).toLocaleString('tr-TR')
+          };
+        };
+        const buildHoldInfo = (item, record, agent, sortTime) => {
+          if (!['hold', 'waiting'].includes(item.status)) return null;
+          const eventTime = item.holdStartedAt || item.forwardedAt || sortTime;
+          return {
+            reason: item.holdReason || item.forwardNote || record.note || 'Bekletme gerekçesi kayda eklenmemiş.',
+            followUp: item.holdFollowUp || (item.forwardedGroup ? `${item.forwardedGroup} kuyruğunda` : 'Takip zamanı belirtilmemiş'),
+            agent: item.holdAgent || item.forwardedBy || record.agentName || agent?.name || 'Atanmamış',
+            dateLabel: new Date(eventTime).toLocaleString('tr-TR')
+          };
+        };
         const enrichArchiveMessages = (record, sourceMessages = []) => {
           const normalized = (sourceMessages || []).filter(Boolean).map((message, index) => ({
             id: message.id || `${record.key}-msg-${index}`,
@@ -5644,6 +5691,7 @@
           const originalCustomerText = normalized.find(message => message.sender === 'customer')?.text || `${record.subject} konusunda destek almak istiyorum.`;
           const isSocial = record.type === 'social';
           const isEmail = record.type === 'email';
+          const actionNoteLabel = record.csatScore ? 'Kapanış / kalite notu' : record.status === 'escalated' ? 'Eskalasyon / aksiyon notu' : 'Bekletme / takip notu';
           if (!isSocial && !isEmail && normalized.length >= 7) return normalized;
           const detailAskByCategory = record.category?.includes('Kripto') || record.subcategory?.includes('Transfer')
             ? 'TxID/hash, ağ bilgisi ve işlem saatini kontrol edebilmem için paylaşmanızı rica ederim.'
@@ -5658,7 +5706,7 @@
               ? 'Gerekli ekran görüntüsünü ve son giriş bilgisini iletiyorum.'
               : 'Tamam, kontrol için gerekli bilgileri iletiyorum.';
           const finalText = record.status === 'escalated'
-            ? `Kontrolleri tamamladım. Talebinizi ${record.subcategory || record.category} başlığıyla ilgili uzman ekibe aktardım; gelişme olduğunda kayıtlı kanalınızdan bilgilendirme yapılacak.`
+            ? `Kontrolleri tamamladım. Talebinizi ${record.escalation?.department || record.category || 'ilgili'} birimine ${record.category || record.subject} başlığıyla aktardım; gelişme olduğunda kayıtlı kanalınızdan bilgilendirme yapılacak.`
             : record.status === 'hold'
               ? `Ön kontrol tamamlandı. Eksik bilgi/operasyon onayı nedeniyle kaydı beklemeye aldım; tamamlandığında aynı kayıt üzerinden dönüş yapılacak.`
               : `Kontrolleri tamamladım. ${record.note || 'Talebiniz için gerekli bilgilendirme yapıldı.'} Yardımcı olabileceğim başka bir konu varsa aynı kanaldan iletebilirsiniz.`;
@@ -5669,7 +5717,7 @@
               { id: `${record.key}-email-2`, sender: 'agent', time: '09:18', text: `Konu: RE: ${record.subject}\n\nMerhaba ${customerFirstName},\n\nAHL Kripto'ya ulaştığınız için teşekkür ederiz. Talebinizi kontrol edebilmemiz için ${detailAskByCategory.charAt(0).toLowerCase()}${detailAskByCategory.slice(1)}\n\nBilgileri iletmeniz halinde kaydınız üzerinden kontrol sağlayacağız.\n\nSaygılarımızla,\n${record.agentName}\nAHL Kripto Müşteri Destek` },
               { id: `${record.key}-email-3`, sender: 'customer', time: '09:46', text: `Merhaba,\n\nİstenen bilgileri iletiyorum. ${customerFollowUp}\n\nTeşekkürler.` },
               { id: `${record.key}-email-4`, sender: 'agent', time: '10:12', text: `Konu: RE: ${record.subject}\n\nMerhaba ${customerFirstName},\n\n${finalText}\n\nFarklı bir talebiniz olması halinde bu e-posta üzerinden veya destek kanallarımızdan bize ulaşabilirsiniz.\n\nSaygılarımızla,\n${record.agentName}\nAHL Kripto Müşteri Destek` },
-              { id: `${record.key}-email-5`, sender: 'note', time: '10:14', text: `Kapanış / kalite notu: ${record.note || 'E-posta yazışması tamamlandı, sınıflandırma ve kapanış notu arşive işlendi.'}` }
+              { id: `${record.key}-email-5`, sender: 'note', time: '10:14', text: `${actionNoteLabel}: ${record.note || 'E-posta kaydı için aksiyon notu arşive işlendi.'}` }
             ];
           }
 
@@ -5679,7 +5727,7 @@
               { id: `${record.key}-social-2`, sender: 'agent', time: '09:08', text: 'Merhaba, bizimle iletişime geçtiğiniz için teşekkür ederiz. Hesap güvenliğiniz nedeniyle sosyal medya üzerinden işlem detayı paylaşamıyoruz. Size telefon veya kayıtlı e-posta kanalınız üzerinden dönüş yapabilmemiz için iletişim bilgilerinizi özel mesajla paylaşmanızı rica ederiz.' },
               { id: `${record.key}-social-3`, sender: 'customer', time: '09:16', text: 'Telefon ve e-posta bilgilerimi özel mesajla paylaştım.' },
               { id: `${record.key}-social-4`, sender: 'agent', time: '09:22', text: 'Teşekkür ederiz. İletişim bilgileriniz alınmıştır. İlgili ekip, talebinizle ilgili telefon veya e-posta üzerinden sizinle iletişime geçecektir.' },
-              { id: `${record.key}-social-5`, sender: 'note', time: '09:24', text: `Sosyal medya kapanış / kalite notu: ${record.note || 'Müşteriden iletişim bilgisi istendi; sosyal medya üzerinden hesap detayı paylaşılmadı.'}` }
+              { id: `${record.key}-social-5`, sender: 'note', time: '09:24', text: `Sosyal medya ${actionNoteLabel.toLocaleLowerCase('tr-TR')}: ${record.note || 'Müşteriden iletişim bilgisi istendi; sosyal medya üzerinden hesap detayı paylaşılmadı.'}` }
             ];
           }
 
@@ -5693,7 +5741,7 @@
             { id: `${record.key}-auto-7`, sender: 'agent', time: '09:20', text: 'Bu konu dışında yardımcı olabileceğim farklı bir talebiniz var mı?' },
             { id: `${record.key}-auto-8`, sender: 'customer', time: '09:21', text: 'Hayır, teşekkür ederim.' },
             { id: `${record.key}-auto-9`, sender: 'agent', time: '09:22', text: 'Rica ederim. AHL Kripto destek ekibi olarak iyi günler dileriz.' },
-            { id: `${record.key}-auto-10`, sender: 'note', time: '09:23', text: `Kapanış / kalite notu: ${record.note || 'Kayıt kontrol edildi, sınıflandırma ve kapanış notu arşive işlendi.'}` }
+            { id: `${record.key}-auto-10`, sender: 'note', time: '09:23', text: `${actionNoteLabel}: ${record.note || 'Kayıt kontrol edildi, sınıflandırma ve aksiyon notu işlendi.'}` }
           ];
         };
         const build = (item, type, label, icon) => {
@@ -5701,6 +5749,13 @@
           const agent = agents.find(row => row.id === item.assignedTo);
           const resolution = item.resolution || {};
           const sortTime = item.resolvedAt || item.endedAt || item.createdAt;
+          const isClosed = closedStatuses.includes(item.status);
+          const csatScore = isClosed ? Number(resolution.csatScore || item.csatScore || getDemoCsatScore(`${type}-${item.id}-${item.status}`)) : null;
+          const defaultNote = item.status === 'escalated'
+            ? 'Talep ilgili birime eskale edildi; birim dönüşü ve aksiyon sonucu bekleniyor.'
+            : ['hold', 'waiting'].includes(item.status)
+              ? 'Talep bekletme/takip durumunda; takip nedeni ve sonraki aksiyon kayda işlendi.'
+              : 'Kapanış notu bulunmuyor.';
           const record = {
             key: `${type}-${item.id}`,
             id: item.id,
@@ -5716,23 +5771,32 @@
             agentName: resolution.agent || agent?.name || 'Atanmamış',
             category: resolution.category || item.category || item.topic || label,
             subcategory: resolution.subcategory || item.type || item.source || item.platform || '-',
-            note: resolution.note || item.note || item.body || 'Kapanış notu bulunmuyor.',
+            note: resolution.note || item.note || item.body || defaultNote,
+            csatScore,
+            surveyNote: isClosed ? (resolution.surveyNote || item.surveyNote || getDemoSurveyNote(csatScore, item.status)) : '',
             messages: [],
             date: sortTime,
             dateLabel: new Date(sortTime).toLocaleString('tr-TR'),
             sortTime
           };
-          return { ...record, messages: enrichArchiveMessages(record, item.messages) };
+          const actionRecord = {
+            ...record,
+            escalation: buildEscalationInfo(item, record, agent, sortTime),
+            holdInfo: buildHoldInfo(item, record, agent, sortTime)
+          };
+          return { ...actionRecord, messages: enrichArchiveMessages(actionRecord, item.messages) };
         };
         const ticketRecords = [
-          ...emails.filter(item => ['resolved', 'completed', 'escalated'].includes(item.status)).map(item => build(item, 'email', 'E-Posta', Mail)),
-          ...chats.filter(item => ['resolved', 'completed', 'escalated'].includes(item.status)).map(item => build(item, 'live_chat', 'Canlı Destek', MessageCircle)),
-          ...social.filter(item => ['resolved', 'completed', 'escalated'].includes(item.status)).map(item => build(item, 'social', 'Sosyal Medya', Twitter))
+          ...emails.filter(item => [...closedStatuses, ...ongoingStatuses].includes(item.status)).map(item => build(item, 'email', 'E-Posta', Mail)),
+          ...chats.filter(item => [...closedStatuses, ...ongoingStatuses].includes(item.status)).map(item => build(item, 'live_chat', 'Canlı Destek', MessageCircle)),
+          ...social.filter(item => [...closedStatuses, ...ongoingStatuses].includes(item.status)).map(item => build(item, 'social', 'Sosyal Medya', Twitter))
         ];
         const historyRecords = CUSTOMER_TICKET_HISTORY.map(item => {
           const customer = getCustomer(item.customerId);
           const agent = agents.find(row => row.name === item.agent);
           const sortTime = parseArchiveDate(item.date);
+          const isClosed = closedStatuses.includes(item.status);
+          const csatScore = isClosed ? Number(item.csatScore || getDemoCsatScore(`history-${item.id}-${item.status}`)) : null;
           const record = {
             key: `history-${item.id}`,
             id: item.id,
@@ -5749,16 +5813,27 @@
             category: item.category,
             subcategory: item.subcategory,
             note: item.closingNote,
+            csatScore,
+            surveyNote: isClosed ? (item.surveyNote || getDemoSurveyNote(csatScore, item.status)) : '',
             messages: [],
             date: item.date,
             dateLabel: item.date,
             sortTime
           };
-          return { ...record, messages: enrichArchiveMessages(record, item.messages) };
+          const actionRecord = {
+            ...record,
+            escalation: buildEscalationInfo(item, record, agent, sortTime),
+            holdInfo: buildHoldInfo(item, record, agent, sortTime)
+          };
+          return { ...actionRecord, messages: enrichArchiveMessages(actionRecord, item.messages) };
         });
         return [...ticketRecords, ...historyRecords].sort((left, right) => right.sortTime - left.sortTime);
       }, [emails, chats, social, agents]);
+      const closedCount = records.filter(record => closedStatuses.includes(record.status)).length;
+      const ongoingCount = records.filter(record => ongoingStatuses.includes(record.status)).length;
       const filtered = records.filter(record => {
+        if (recordScope === 'closed' && !closedStatuses.includes(record.status)) return false;
+        if (recordScope === 'ongoing' && !ongoingStatuses.includes(record.status)) return false;
         const query = archiveSearch.trim().toLocaleLowerCase('tr-TR');
         if (query) {
           const haystack = `${record.customerName} ${record.customerId} ${record.subject} ${record.category} ${record.subcategory} ${record.agentName} ${record.team}`.toLocaleLowerCase('tr-TR');
@@ -5775,8 +5850,16 @@
         <div className="flex h-full bg-slate-100 dark:bg-slate-950">
           <section className="flex w-80 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
             <div className="border-b border-slate-200 p-4 dark:border-slate-800">
-              <h2 className="text-sm font-black text-slate-900 dark:text-white">Arşiv & Kalite</h2>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Yazılı kayıtlar ve kalite inceleme dökümleri</p>
+              <h2 className="text-sm font-black text-slate-900 dark:text-white">Kayıt & Kalite</h2>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Kapanan kayıtlar ve devam eden aksiyon takibi</p>
+              <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
+                <button onClick={() => setRecordScope('closed')} className={cx('rounded-lg px-2 py-2 text-[11px] font-black transition', recordScope === 'closed' ? 'bg-white text-emerald-700 shadow-sm dark:bg-slate-950 dark:text-emerald-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200')}>
+                  Çözümlenen <span className="mono">({closedCount})</span>
+                </button>
+                <button onClick={() => setRecordScope('ongoing')} className={cx('rounded-lg px-2 py-2 text-[11px] font-black transition', recordScope === 'ongoing' ? 'bg-white text-amber-700 shadow-sm dark:bg-slate-950 dark:text-amber-300' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200')}>
+                  Devam Eden <span className="mono">({ongoingCount})</span>
+                </button>
+              </div>
               <div className="relative mt-4">
                 <Icon icon={Search} size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input value={archiveSearch} onChange={(event) => setArchiveSearch(event.target.value)} placeholder="Müşteri, konu, kategori veya ekip ara..." className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs font-bold text-slate-600 outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200" />
@@ -5828,6 +5911,19 @@
                         <span className="block truncate text-sm font-black text-slate-900 dark:text-white">{maskName(record.customerName)}</span>
                         <span className="mt-0.5 block truncate text-xs font-bold text-slate-600 dark:text-slate-300">{record.subject}</span>
                         <span className="mt-1 block text-[10px] text-slate-400">{record.agentName} · {record.team} · {record.dateLabel}</span>
+                        {record.csatScore ? (
+                          <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-yellow-50 px-2 py-0.5 text-[10px] font-black text-yellow-700 ring-1 ring-yellow-200 dark:bg-yellow-950/30 dark:text-yellow-300 dark:ring-yellow-800">
+                            <Icon icon={Star} size={10} className="fill-current" /> CSAT {record.csatScore}/5
+                          </span>
+                        ) : record.escalation ? (
+                          <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-black text-red-700 ring-1 ring-red-200 dark:bg-red-950/30 dark:text-red-300 dark:ring-red-800">
+                            <Icon icon={ExternalLink} size={10} /> {record.escalation.department}
+                          </span>
+                        ) : (
+                          <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:ring-amber-800">
+                            <Icon icon={Clock} size={10} /> Bekleme takibi
+                          </span>
+                        )}
                       </span>
                       <span className={cx('rounded-full px-2 py-0.5 text-[10px] font-black', meta.badge)}>{meta.label}</span>
                     </div>
@@ -5857,7 +5953,7 @@
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-4">
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft dark:border-slate-800 dark:bg-slate-950">
                     <div className="text-[10px] font-black uppercase text-slate-400">Kategori</div>
                     <div className="mt-2 text-sm font-black text-slate-900 dark:text-white">{selected.category}</div>
@@ -5870,10 +5966,87 @@
                     <div className="text-[10px] font-black uppercase text-slate-400">Durum</div>
                     <div className="mt-2 text-sm font-black text-slate-900 dark:text-white">{ticketStatusMeta[selected.status]?.label || selected.status}</div>
                   </div>
+                  {selected.csatScore ? (
+                    <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 shadow-soft dark:border-yellow-800 dark:bg-yellow-950/25">
+                      <div className="text-[10px] font-black uppercase text-yellow-700 dark:text-yellow-300">CSAT</div>
+                      <div className="mt-2 flex items-center gap-1 text-sm font-black text-yellow-800 dark:text-yellow-200">
+                        <Icon icon={Star} size={15} className="fill-current" /> {selected.csatScore}/5
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-soft dark:border-amber-800 dark:bg-amber-950/25">
+                      <div className="text-[10px] font-black uppercase text-amber-700 dark:text-amber-300">Aksiyon Durumu</div>
+                      <div className="mt-2 text-sm font-black text-amber-900 dark:text-amber-100">{selected.escalation ? 'Eskalasyon açık' : 'Bekleme takibinde'}</div>
+                    </div>
+                  )}
                 </div>
+                {selected.escalation && (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-5 shadow-soft dark:border-red-800 dark:bg-red-950/25">
+                    <div className="mb-4 flex items-center gap-2 text-xs font-black uppercase text-red-700 dark:text-red-200">
+                      <Icon icon={ExternalLink} size={15} /> Eskalasyon Detayı
+                    </div>
+                    <div className="grid grid-cols-4 gap-3 text-sm">
+                      <div className="rounded-xl bg-white/75 p-3 dark:bg-slate-950/45">
+                        <div className="text-[10px] font-black uppercase text-slate-400">Birim</div>
+                        <div className="mt-1 font-black text-slate-900 dark:text-white">{selected.escalation.department}</div>
+                      </div>
+                      <div className="rounded-xl bg-white/75 p-3 dark:bg-slate-950/45">
+                        <div className="text-[10px] font-black uppercase text-slate-400">Eskale Eden</div>
+                        <div className="mt-1 font-black text-slate-900 dark:text-white">{selected.escalation.agent}</div>
+                      </div>
+                      <div className="rounded-xl bg-white/75 p-3 dark:bg-slate-950/45">
+                        <div className="text-[10px] font-black uppercase text-slate-400">Tarih</div>
+                        <div className="mt-1 font-black text-slate-900 dark:text-white">{selected.escalation.dateLabel}</div>
+                      </div>
+                      <div className="rounded-xl bg-white/75 p-3 dark:bg-slate-950/45">
+                        <div className="text-[10px] font-black uppercase text-slate-400">Öncelik</div>
+                        <div className="mt-1 font-black text-slate-900 dark:text-white">{selected.escalation.priority}</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 rounded-xl bg-white/75 p-3 dark:bg-slate-950/45">
+                      <div className="text-[10px] font-black uppercase text-slate-400">Eskalasyon Başlığı</div>
+                      <div className="mt-1 text-sm font-black text-slate-900 dark:text-white">{selected.escalation.category} · {selected.escalation.subject}</div>
+                    </div>
+                    <div className="mt-3 rounded-xl bg-white/75 p-3 dark:bg-slate-950/45">
+                      <div className="text-[10px] font-black uppercase text-slate-400">Eskalasyon Notu</div>
+                      <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-200">{selected.escalation.note}</p>
+                    </div>
+                  </div>
+                )}
+                {selected.holdInfo && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-soft dark:border-amber-800 dark:bg-amber-950/25">
+                    <div className="mb-4 flex items-center gap-2 text-xs font-black uppercase text-amber-700 dark:text-amber-200">
+                      <Icon icon={Clock} size={15} /> Bekletme Detayı
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div className="rounded-xl bg-white/75 p-3 dark:bg-slate-950/45">
+                        <div className="text-[10px] font-black uppercase text-slate-400">Bekleten</div>
+                        <div className="mt-1 font-black text-slate-900 dark:text-white">{selected.holdInfo.agent}</div>
+                      </div>
+                      <div className="rounded-xl bg-white/75 p-3 dark:bg-slate-950/45">
+                        <div className="text-[10px] font-black uppercase text-slate-400">Tarih</div>
+                        <div className="mt-1 font-black text-slate-900 dark:text-white">{selected.holdInfo.dateLabel}</div>
+                      </div>
+                      <div className="rounded-xl bg-white/75 p-3 dark:bg-slate-950/45">
+                        <div className="text-[10px] font-black uppercase text-slate-400">Takip</div>
+                        <div className="mt-1 font-black text-slate-900 dark:text-white">{selected.holdInfo.followUp}</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 rounded-xl bg-white/75 p-3 dark:bg-slate-950/45">
+                      <div className="text-[10px] font-black uppercase text-slate-400">Bekletme Gerekçesi</div>
+                      <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-200">{selected.holdInfo.reason}</p>
+                    </div>
+                  </div>
+                )}
                 <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-5 dark:border-indigo-800 dark:bg-indigo-950/25">
-                  <div className="mb-2 text-xs font-black uppercase text-indigo-700 dark:text-indigo-200">Kapanış / Kalite Notu</div>
+                  <div className="mb-2 text-xs font-black uppercase text-indigo-700 dark:text-indigo-200">{selected.csatScore ? 'Kapanış / Kalite Notu' : 'Kayıt Notu'}</div>
                   <p className="text-sm leading-7 text-indigo-900 dark:text-indigo-100">{selected.note}</p>
+                  {selected.csatScore && (
+                    <div className="mt-4 rounded-xl border border-white/70 bg-white/70 p-3 dark:border-indigo-800/60 dark:bg-slate-950/45">
+                      <div className="mb-1 text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">Anket Yorumu</div>
+                      <p className="text-xs leading-6 text-slate-700 dark:text-slate-200">{selected.surveyNote || 'Anket üzerinde ek not iletilmedi.'}</p>
+                    </div>
+                  )}
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft dark:border-slate-800 dark:bg-slate-950">
                   <h3 className="mb-4 text-sm font-black text-slate-900 dark:text-white">Etkileşim Dökümü</h3>
@@ -7266,7 +7439,6 @@
     function ResolveModal({ modal, onClose, onConfirm }) {
       const [category, setCategory] = useState(Object.keys(RESOLUTION_DATA)[0]);
       const [subcategory, setSubcategory] = useState('');
-      const [csat, setCsat] = useState(true);
       const [note, setNote] = useState('');
       const [forceClose, setForceClose] = useState(false);
       const item = modal.item;
@@ -7305,15 +7477,15 @@
                 </select>
               </div>
             </div>
-            <label className="flex items-center justify-between rounded-xl border border-slate-200 p-3 text-sm font-bold text-slate-700 dark:border-slate-800 dark:text-slate-200">
-              Müşteriye değerlendirme anketi gönder
-              <input type="checkbox" checked={csat} onChange={(event) => setCsat(event.target.checked)} className="h-4 w-4" />
-            </label>
+            <div className="flex items-start gap-2 rounded-xl border border-yellow-200 bg-yellow-50 p-3 text-xs font-bold text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-200">
+              <Icon icon={Star} size={14} className="mt-0.5 fill-current" />
+              Değerlendirme anketi talep kapandığında müşteriye otomatik gönderilir.
+            </div>
             <div>
               <label className="mb-1 block text-xs font-black text-slate-600 dark:text-slate-300">Kapanış Notu</label>
               <textarea value={note} onChange={(event) => setNote(event.target.value)} className="h-28 w-full resize-none rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus:border-indigo-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100" placeholder="Kapanış notu zorunludur."></textarea>
             </div>
-            <button disabled={disabled} onClick={() => onConfirm({ category, subcategory, csat, note })} className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">Çözümle ve Kapat</button>
+            <button disabled={disabled} onClick={() => onConfirm({ category, subcategory, note })} className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">Çözümle ve Kapat</button>
           </div>
         </ModalShell>
       );
@@ -7733,7 +7905,7 @@
         social: 'Sosyal Medya',
         knowledge: 'Bilgi Bankası',
         reports: 'Raporlama',
-        qualityArchive: 'Arşiv & Kalite',
+        qualityArchive: 'Kayıt & Kalite',
         announcements: 'Duyurular',
         team: 'Ekip Yönetimi',
         announcementManagement: 'Duyuru Yönetimi'
@@ -7935,25 +8107,61 @@
 
       const confirmResolve = (payload) => {
         const { item, type } = resolveModal;
+        const resolvedAt = Date.now();
+        const csatScore = getDemoCsatScore(`${type}-${item.id}-${resolvedAt}`);
+        const resolution = {
+          ...payload,
+          csat: true,
+          csatScore,
+          surveyNote: getDemoSurveyNote(csatScore, 'resolved'),
+          surveySent: true,
+          surveySentAt: new Date(resolvedAt).toLocaleString('tr-TR'),
+          agent: currentAgent.name
+        };
         updateByType(type, item.id, row => ({
           ...row,
           status: type === 'phone' ? 'completed' : 'resolved',
-          resolvedAt: Date.now(),
-          resolution: payload,
+          resolvedAt,
+          resolution,
           unread: 0
         }));
-        addAudit('Talep kapatıldı', item.id, type, `${payload.category} / ${payload.subcategory} · CSAT: ${payload.csat ? 'Açık' : 'Kapalı'} · ${payload.note}`);
+        addAudit('Talep kapatıldı', item.id, type, `${payload.category} / ${payload.subcategory} · CSAT anketi otomatik gönderildi · Skor: ${csatScore}/5 · ${payload.note}`);
         setResolveModal(null);
       };
 
       const confirmEscalate = (payload) => {
         const { item, type } = escalateModal;
-        updateByType(type, item.id, row => ({
-          ...row,
-          status: 'escalated',
-          priority: payload.priority === 'Çok Acil' ? 'urgent' : row.priority,
-          escalationCount: (row.escalationCount || 0) + 1
-        }));
+        const escalatedAt = Date.now();
+        updateByType(type, item.id, row => {
+          const escalationCategory = row.category || row.topic || row.subject || 'Kategori belirtilmedi';
+          const escalation = {
+            department: payload.department,
+            priority: payload.priority,
+            note: payload.note || 'Not eklenmedi',
+            agent: currentAgent.name,
+            category: escalationCategory,
+            subject: row.subject || row.type || row.direction || row.id,
+            at: escalatedAt,
+            dateLabel: new Date(escalatedAt).toLocaleString('tr-TR')
+          };
+          const noteMessage = row.messages ? {
+            id: generateId('escalation-note'),
+            sender: 'note',
+            time: new Date(escalatedAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+            text: `Eskalasyon: ${payload.department} · ${payload.priority} · Başlık: ${escalationCategory}${payload.note ? ` · Not: ${payload.note}` : ''}`,
+            agentName: currentAgent.name,
+            agentAvatar: currentAgent.avatar || getInitials(currentAgent.name)
+          } : null;
+          return {
+            ...row,
+            status: 'escalated',
+            priority: payload.priority === 'Çok Acil' ? 'urgent' : row.priority,
+            escalationCount: (row.escalationCount || 0) + 1,
+            escalatedAt,
+            escalation,
+            messages: noteMessage ? [...row.messages, noteMessage] : row.messages
+          };
+        });
         addAudit('Talep eskale edildi', item.id, type, `${payload.department} · ${payload.priority} · ${payload.note || 'Not eklenmedi'}`);
         setEscalateModal(null);
       };
@@ -7974,6 +8182,8 @@
             status: row.status === 'completed' ? row.status : 'hold',
             forwardedGroup: payload.group,
             forwardNote: payload.note,
+            forwardedBy: currentAgent.name,
+            forwardedAt: Date.now(),
             messages: noteMessage ? [...row.messages, noteMessage] : row.messages
           };
         });
@@ -7997,6 +8207,7 @@
             status: 'hold',
             holdReason: payload.reason,
             holdFollowUp: payload.followUp,
+            holdAgent: currentAgent.name,
             holdStartedAt: Date.now(),
             messages: noteMessage ? [...row.messages, noteMessage] : row.messages
           };
