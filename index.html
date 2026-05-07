@@ -1931,6 +1931,14 @@
       return `${Number(value).toLocaleString('tr-TR', { maximumFractionDigits: 8 })} ${currency}`;
     };
 
+    const getInitials = (name = '') => name
+      .split(' ')
+      .filter(Boolean)
+      .map(part => part[0])
+      .join('')
+      .slice(0, 2)
+      .toLocaleUpperCase('tr-TR') || 'EC';
+
     const UNKNOWN_CUSTOMER_PROFILE = {
       id: 'unknown',
       name: 'Bilinmeyen Numara',
@@ -2221,8 +2229,8 @@
       const map = {
         green: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-800',
         yellow: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800',
-        red: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-200 dark:border-red-800 sla-pulse',
-        expired: 'bg-red-600 text-white border-red-600 sla-pulse'
+        red: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-200 dark:border-red-800',
+        expired: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-200 dark:border-red-800'
       };
       return `${base} ${map[tone]} border rounded-lg font-bold`;
     };
@@ -2370,23 +2378,37 @@
       );
     }
 
-    function MonitoringBanners({ flags, unansweredCount }) {
-      if (!flags?.length) return null;
-      const banners = [
-        flags.includes('KEYWORD_FLAG') && { icon: Shield, text: 'Hassas kelime tespit edildi. Yanıt öncesi süreç tonu ve eskalasyon gerekliliği kontrol edilmeli.', className: 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100' },
-        flags.includes('SLA_OVERDUE') && { icon: AlertTriangle, text: 'SLA aşıldı. Yönetici müdahalesi veya öncelik yükseltme önerilir.', className: 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100' },
-        flags.includes('SLA_CRITICAL') && { icon: TimerReset, text: 'SLA kritik aralıkta. Konuşma öncelikli izleniyor.', className: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100' },
-        flags.includes('UNANSWERED') && { icon: MessageSquare, text: `${unansweredCount} ardışık müşteri mesajı yanıt bekliyor.`, className: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100' },
-        flags.includes('AGENT_IDLE') && { icon: Clock, text: 'Temsilci yanıtından sonra konuşma yeniden hızlanmalı; bekleme sinyali oluştu.', className: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200' }
-      ].filter(Boolean);
+    function ConversationNoticeBar({ flags = [], unansweredCount = 0, item, wrongNetwork = false }) {
+      const notices = [
+        flags.includes('KEYWORD_FLAG') && { key: 'keyword', label: 'Hassas ifade', detail: 'Yanıt tonu kontrol edilmeli.', icon: Shield, priority: 5, className: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-200 dark:border-red-800' },
+        flags.includes('SLA_OVERDUE') && { key: 'sla-overdue', label: 'SLA aşıldı', detail: 'Öncelik yükseltilebilir.', icon: AlertTriangle, priority: 4, className: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-200 dark:border-red-800' },
+        flags.includes('SLA_CRITICAL') && { key: 'sla-critical', label: 'SLA kritik', detail: 'Yanıt süresi yakından izlenmeli.', icon: TimerReset, priority: 3, className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800' },
+        flags.includes('UNANSWERED') && { key: 'unanswered', label: `${Math.max(1, unansweredCount)} yanıtsız`, detail: 'Müşteri mesajı bekliyor.', icon: MessageSquare, priority: 2, className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800' },
+        wrongNetwork && { key: 'network', label: 'Ağ kontrolü', detail: 'Hash, ağ ve alıcı adresi doğrulanmalı.', icon: Link, priority: 2, className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800' },
+        item?.status === 'hold' && { key: 'hold', label: 'Beklemede', detail: 'Bekletme gerekçesi iç notta izlenmeli.', icon: Pause, priority: 1, className: 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800' },
+        flags.includes('AGENT_IDLE') && { key: 'idle', label: 'Takip bekliyor', detail: 'Konuşma yeniden hızlanmalı.', icon: Clock, priority: 1, className: 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800' }
+      ].filter(Boolean).sort((a, b) => b.priority - a.priority);
+
+      if (!notices.length) return null;
+      const primary = notices[0];
       return (
-        <div className="space-y-2 border-b border-slate-200 bg-white px-5 py-3 dark:border-slate-800 dark:bg-slate-950">
-          {banners.map((banner, index) => (
-            <div key={index} className={cx('flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold fade-in', banner.className)}>
-              <Icon icon={banner.icon} size={14} />
-              {banner.text}
+        <div className="border-b border-slate-200 bg-white px-5 py-2 dark:border-slate-800 dark:bg-slate-950">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-800 dark:bg-slate-900/70">
+            <div className="flex min-w-0 items-center gap-2 text-slate-700 dark:text-slate-200">
+              <Icon icon={primary.icon} size={14} className={primary.className.includes('red') ? 'text-red-600' : primary.className.includes('amber') ? 'text-amber-600' : 'text-slate-500'} />
+              <span className="shrink-0 font-black">{primary.label}</span>
+              <span className="truncate font-semibold text-slate-500 dark:text-slate-400">{primary.detail}</span>
             </div>
-          ))}
+            <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+              {notices.slice(0, 4).map(notice => (
+                <span key={notice.key} className={cx('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black', notice.className)}>
+                  <Icon icon={notice.icon} size={10} />
+                  {notice.label}
+                </span>
+              ))}
+              {notices.length > 4 && <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-black text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">+{notices.length - 4}</span>}
+            </div>
+          </div>
         </div>
       );
     }
@@ -2776,16 +2798,21 @@
       );
     }
 
-    function MessageBubble({ message }) {
+    function MessageBubble({ message, fallbackAgentName = 'Engin Can K.' }) {
       if (message.sender === 'note') {
+        const noteAuthor = message.agentName || message.author || message.by || fallbackAgentName;
+        const noteAvatar = message.agentAvatar || getInitials(noteAuthor);
         return (
-          <div className="mx-auto my-3 max-w-[82%] rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
-            <div className="mb-1 flex items-center gap-2 text-xs font-black uppercase tracking-wide">
-              <Icon icon={Lock} size={13} />
-              İç Not
+          <div className="mx-auto my-3 flex max-w-[82%] items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500 text-[10px] font-black text-white">{noteAvatar}</div>
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex items-center gap-2 text-xs font-black uppercase tracking-wide">
+                <Icon icon={Lock} size={13} />
+                İç Not · {noteAuthor}
+              </div>
+              <div>{message.text}</div>
+              <div className="mt-1 text-right text-[11px] opacity-70">{message.time}</div>
             </div>
-            <div>{message.text}</div>
-            <div className="mt-1 text-right text-[11px] opacity-70">{message.time}</div>
           </div>
         );
       }
@@ -2997,7 +3024,12 @@
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {monitoringMode && flags.length > 0 && <FlagPills flags={flags} />}
+                {monitoringMode && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-black text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                    <Icon icon={Eye} size={12} />
+                    İzleme: {assignedAgent?.name || 'Atanmamış'}
+                  </span>
+                )}
                 <SlaBadge item={item} type={type} now={now} large />
                 {monitoringMode && assignedAgent?.id !== currentAgent.id && (
                   <button onClick={onTakeover} className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-950">
@@ -3021,28 +3053,11 @@
                 </button>
               </div>
             </div>
-            {monitoringMode && (
-              <div className="mt-3 flex items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-800 dark:border-indigo-800 dark:bg-indigo-950/35 dark:text-indigo-100">
-                <span className="flex items-center gap-2"><Icon icon={Eye} size={14} />Monitoring modu — konuşma risk sinyallerine göre izleniyor.</span>
-                <span className="rounded-full bg-white/75 px-2 py-0.5 text-[10px] font-black text-indigo-700 dark:bg-slate-950/60 dark:text-indigo-200">{assignedAgent?.name || 'Atanmamış'}</span>
-              </div>
-            )}
-            {item.status === 'hold' && (
-              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
-                Müşteri beklemede. Bekletme gerekçesi konuşma notuna eklenmeli.
-              </div>
-            )}
-            {wrongNetwork && (
-              <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
-                <Icon icon={AlertTriangle} size={16} />
-                Yanlış ağ transferi tespit edilmiş olabilir. Hash, ağ ve alıcı adresi doğrulanmalı.
-              </div>
-            )}
           </div>
-          {monitoringMode && <MonitoringBanners flags={flags} unansweredCount={unansweredCount} />}
+          <ConversationNoticeBar flags={monitoringMode ? flags : []} unansweredCount={unansweredCount} item={item} wrongNetwork={wrongNetwork} />
 
           <div className="flex-1 overflow-y-auto px-6 py-5 no-scrollbar">
-            {item.messages.map(message => <MessageBubble key={message.id} message={message} />)}
+            {item.messages.map(message => <MessageBubble key={message.id} message={message} fallbackAgentName={currentAgent.name} />)}
             {typing && (
               <div className="my-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-indigo-500"></span>
@@ -3183,9 +3198,9 @@
                   <option value="link">Talebi İlişkilendir</option>
                 </select>
                 <button disabled={!action || readOnly} title={readOnly ? 'İzleme modunda düzenleme yapamazsınız' : ''} onClick={applyAction} className="h-9 rounded-lg bg-slate-800 px-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-slate-700">Uygula</button>
-                <button onClick={send} title={readOnly ? 'İzleme modunda düzenleme yapamazsınız' : ''} disabled={!draft.trim() || readOnly} className="flex h-9 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-xs font-black text-white shadow-soft disabled:cursor-not-allowed disabled:opacity-40">
-                  <Icon icon={Send} size={15} />
-                  Gönder
+                <button onClick={send} title={readOnly ? 'İzleme modunda düzenleme yapamazsınız' : ''} disabled={!draft.trim() || readOnly} className={cx('flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-black text-white shadow-soft disabled:cursor-not-allowed disabled:opacity-40', mode === 'note' ? 'bg-amber-500' : 'bg-indigo-600')}>
+                  <Icon icon={mode === 'note' ? Lock : Send} size={15} />
+                  {mode === 'note' ? 'Not Kaydet' : 'Gönder'}
                 </button>
               </div>
             </div>
@@ -3969,8 +3984,9 @@
       const isAgent = message.sender === 'agent';
       const isNote = message.sender === 'note';
       const isSupervisor = message.sender === 'supervisor';
-      const senderName = isSupervisor ? 'Süpervizör Fısıltısı' : isAgent ? agentName : isNote ? 'İç Not' : customerName;
-      const avatar = isSupervisor ? 'SF' : isAgent ? agentName.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase() : isNote ? 'İN' : senderName.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase();
+      const noteAuthor = message.agentName || message.author || message.by || agentName;
+      const senderName = isSupervisor ? 'Süpervizör Fısıltısı' : isAgent ? agentName : isNote ? `İç Not · ${noteAuthor}` : customerName;
+      const avatar = isSupervisor ? 'SF' : isAgent ? getInitials(agentName) : isNote ? (message.agentAvatar || getInitials(noteAuthor)) : getInitials(senderName);
       const renderBody = (text) => text.split('\n').map((line, index) => {
         if (line.trim().startsWith('>')) {
           return <div key={index} className="my-2 border-l-2 border-indigo-400 bg-indigo-50/30 px-3 py-2 text-xs italic text-slate-500 dark:bg-indigo-950/20 dark:text-slate-300">{line.replace(/^>\s?/, '')}</div>;
@@ -4396,7 +4412,8 @@
             id: generateId(isNote ? 'note' : 'msg'),
             sender: isNote ? 'note' : 'agent',
             time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-            text
+            text,
+            ...(isNote ? { agentName: currentAgent.name, agentAvatar: currentAgent.avatar || getInitials(currentAgent.name) } : {})
           };
           return { ...row, unread: 0, sentReply: isNote ? row.sentReply : true, messages: [...row.messages, message] };
         }));
@@ -4717,7 +4734,7 @@
                 </div>
                 <p className="text-sm leading-7 text-slate-700 dark:text-slate-200">{active.body}</p>
               </div>
-              {active.messages.map(message => <MessageBubble key={message.id} message={message} />)}
+              {active.messages.map(message => <MessageBubble key={message.id} message={message} fallbackAgentName={currentAgent.name} />)}
             </div>
             <div className="border-t border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
               {readOnly && (
@@ -4881,7 +4898,7 @@
         const internalNote = note.trim();
         setCalls(prev => prev.map(call => {
           if (call.id !== callId) return call;
-          const noteMessage = internalNote ? { id: generateId('call-note'), sender: 'note', time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), text: internalNote } : null;
+          const noteMessage = internalNote ? { id: generateId('call-note'), sender: 'note', time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), text: internalNote, agentName: currentAgent.name, agentAvatar: currentAgent.avatar || getInitials(currentAgent.name) } : null;
           return { ...call, status: 'completed', endedAt: Date.now(), note: internalNote, holdStartedAt: null, messages: noteMessage ? [...(call.messages || []), noteMessage] : call.messages };
         }));
         setAcw({ callId, startedAt: Date.now() });
@@ -5895,6 +5912,7 @@
       onCallCustomer
     }) {
       const [tab, setTab] = useState('summary');
+      const [activityTab, setActivityTab] = useState('fiat');
       const [detailTicket, setDetailTicket] = useState(null);
       const customer = getCustomer(customerId);
       const relatedTickets = useMemo(() => {
@@ -5925,16 +5943,49 @@
         const numeric = Number(String(tx.amount).replace(/\./g, '').replace(',', '.'));
         return Number.isFinite(numeric) ? sum + numeric : sum;
       }, 0);
+      const statusTone = (status) => status === 'tamamlandı' || status === 'tamamlanan'
+        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200'
+        : status === 'beklemede' || status === 'aktif'
+          ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-200'
+          : 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-200';
+      const transactionAmountLabel = (item) => `${item.amount} ${item.currency}`.trim();
+      const fiatTransactions = customer.lastTransactions
+        .filter(tx => tx.currency === 'TRY' || /TL|TRY/i.test(tx.type))
+        .map((tx, index) => ({ ...tx, id: `fiat-${index}`, detail: tx.type.includes('Çekim') ? 'TL çekim' : tx.type.includes('Yatırma') ? 'TL yatırma' : 'TL hareketi' }));
+      if (fiatTransactions.length === 0) {
+        fiatTransactions.push({ id: 'fiat-fallback-1', date: '05.05.2026', type: 'TL Yatırma', amount: '12.000', currency: 'TRY', status: 'tamamlandı', detail: 'TL yatırma' });
+      }
+      const cryptoTransactions = customer.lastTransactions
+        .filter(tx => tx.currency !== 'TRY' && tx.currency !== '-' && !/TL|TRY/i.test(tx.type))
+        .map((tx, index) => ({ ...tx, id: `crypto-${index}`, detail: tx.type.includes('Çekim') ? 'Kripto çekim' : tx.type.includes('Yatırma') ? 'Kripto yatırma' : tx.type.includes('Alış') ? 'Kripto alış' : tx.type.includes('Satış') ? 'Kripto satış' : 'Kripto hareketi' }));
+      cryptoTransactions.push(
+        { id: 'crypto-sim-buy', date: '05.05.2026', type: 'BTC Alış', amount: customer.vipStatus ? '0.184' : '0.018', currency: 'BTC', status: 'tamamlandı', detail: 'Kripto alış' },
+        { id: 'crypto-sim-sell', date: '04.05.2026', type: 'ETH Satış', amount: customer.vipStatus ? '4.20' : '0.35', currency: 'ETH', status: 'tamamlandı', detail: 'Kripto satış' }
+      );
+      const accountEvents = [
+        { id: 'acc-login', date: customer.lastLogin.date, type: 'Başarılı Giriş', detail: `${customer.lastLogin.device} · ${customer.lastLogin.ip}`, status: suspiciousIp ? 'riskli' : 'tamamlandı' },
+        { id: 'acc-pass', date: '05.05.2026 21:18', type: 'Parola Değişikliği', detail: 'Müşteri panelinden parola güncellendi.', status: 'tamamlandı' },
+        { id: 'acc-2fa', date: '05.05.2026 19:42', type: customer.kycStatus === 'pending' ? '2FA Sıfırlama Talebi' : '2FA Aktifleştirme', detail: customer.kycStatus === 'pending' ? 'Güvenlik formu bekleniyor.' : 'Authenticator uygulaması aktif.', status: customer.kycStatus === 'pending' ? 'beklemede' : 'tamamlandı' },
+        { id: 'acc-mail', date: '03.05.2026 16:05', type: 'E-posta Değişikliği', detail: 'Kayıtlı e-posta için doğrulama bağlantısı gönderildi.', status: 'tamamlandı' }
+      ];
+      const orderRows = [
+        { id: 'ord-active-1', date: '06.05.2026 10:42', pair: 'BTC/TRY', side: 'Alış', type: 'Limit', amount: customer.vipStatus ? '0.2500 BTC' : '0.0180 BTC', price: customer.vipStatus ? '2.196.000 TRY' : '2.184.500 TRY', status: 'aktif' },
+        { id: 'ord-active-2', date: '06.05.2026 09:58', pair: 'USDT/TRY', side: 'Satış', type: 'Limit', amount: customer.vipStatus ? '15.000 USDT' : '750 USDT', price: '32,18 TRY', status: 'aktif' },
+        { id: 'ord-done-1', date: '05.05.2026 15:24', pair: 'ETH/TRY', side: 'Alış', type: 'Piyasa', amount: customer.vipStatus ? '8.40 ETH' : '0.42 ETH', price: customer.vipStatus ? '93.400 TRY' : '92.880 TRY', status: 'tamamlanan' },
+        { id: 'ord-done-2', date: '04.05.2026 11:12', pair: 'BTC/USDT', side: 'Satış', type: 'Limit', amount: customer.vipStatus ? '0.6200 BTC' : '0.0210 BTC', price: '68.420 USDT', status: 'tamamlanan' }
+      ];
+      const activeOrders = orderRows.filter(order => order.status === 'aktif');
+      const completedOrders = orderRows.filter(order => order.status !== 'aktif');
       const nextBestActions = [
         suspiciousIp && { text: 'Son giriş IP adresi riskli görünüyor; güvenlik teyidiyle başla.', tab: 'account', label: 'Loglara Git' },
         openTickets.some(item => item.priority === 'urgent') && { text: 'Acil öncelikli açık talep var; önce SLA ve son mesajı kontrol et.', tab: 'tickets', label: 'Taleplere Git' },
         openTickets.some(item => detectWrongNetwork(item.messages || [])) && { text: 'Yanlış ağ transferi sinyali var; hash, ağ ve alıcı adresini tek mesajda iste.', tab: 'tickets', label: 'Taleplere Git' },
-        { text: `Komisyon seviyesi: Maker %${customer.commissionLevel.maker.toFixed(2)} · Taker %${customer.commissionLevel.taker.toFixed(2)}.`, tab: 'transactions', label: 'İşlem/Hacim' }
+        { text: `Komisyon seviyesi: Maker %${customer.commissionLevel.maker.toFixed(2)} · Taker %${customer.commissionLevel.taker.toFixed(2)}.`, tab: 'transactions', label: 'Hareketler' }
       ].filter(Boolean);
       const tabs = [
         { id: 'summary', label: 'Özet', icon: Activity },
         { id: 'tickets', label: 'Talepler', icon: MessageSquare },
-        { id: 'transactions', label: 'İşlem/Hacim', icon: Wallet },
+        { id: 'transactions', label: 'Hareketler', icon: Wallet },
         { id: 'account', label: 'Hesap Logları', icon: Shield },
         { id: 'notes', label: 'Çözüm', icon: BookOpen }
       ];
@@ -6122,21 +6173,95 @@
                   )}
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
-                  <h3 className="mb-3 text-sm font-black text-slate-900 dark:text-white">Son İşlemler</h3>
-                  <div className="space-y-2">
-                    {customer.lastTransactions.map((tx, index) => {
-                      const status = tx.status === 'tamamlandı' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200' : tx.status === 'beklemede' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-200' : 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-200';
-                      return (
-                        <div key={`${tx.date}-${index}`} className="grid grid-cols-[1fr_auto] gap-3 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-900">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">Finans ve Hesap Hareketleri</h3>
+                    <span className="text-[10px] font-bold text-slate-400">Anlık ve geçmiş kayıtlar</span>
+                  </div>
+                  <div className="mb-4 grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
+                    {[
+                      { id: 'fiat', label: 'Fiat İşlemler', icon: Wallet },
+                      { id: 'crypto', label: 'Kripto İşlemler', icon: Activity },
+                      { id: 'account', label: 'Hesap İşlemleri', icon: Shield },
+                      { id: 'orders', label: 'Emirler', icon: BarChart2 }
+                    ].map(item => (
+                      <button key={item.id} onClick={() => setActivityTab(item.id)} className={cx('flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-[10px] font-black transition', activityTab === item.id ? 'bg-white text-indigo-600 shadow-sm dark:bg-slate-800 dark:text-indigo-300' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white')}>
+                        <Icon icon={item.icon} size={15} />
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {activityTab === 'fiat' && (
+                    <div className="space-y-2 fade-in">
+                      {fiatTransactions.map(tx => (
+                        <div key={tx.id} className="grid grid-cols-[1fr_auto] gap-3 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-900">
                           <div>
                             <div className="font-black text-slate-900 dark:text-white">{tx.type}</div>
-                            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{tx.date} · {tx.amount} {tx.currency}</div>
+                            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{tx.date} · {tx.detail} · {transactionAmountLabel(tx)}</div>
                           </div>
-                          <span className={cx('self-start rounded-full px-2 py-0.5 text-[10px] font-black', status)}>{tx.status}</span>
+                          <span className={cx('self-start rounded-full px-2 py-0.5 text-[10px] font-black', statusTone(tx.status))}>{tx.status}</span>
                         </div>
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {activityTab === 'crypto' && (
+                    <div className="space-y-2 fade-in">
+                      {cryptoTransactions.map(tx => (
+                        <div key={tx.id} className="grid grid-cols-[1fr_auto] gap-3 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-900">
+                          <div>
+                            <div className="font-black text-slate-900 dark:text-white">{tx.type}</div>
+                            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{tx.date} · {tx.detail} · {transactionAmountLabel(tx)}</div>
+                          </div>
+                          <span className={cx('self-start rounded-full px-2 py-0.5 text-[10px] font-black', statusTone(tx.status))}>{tx.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {activityTab === 'account' && (
+                    <div className="space-y-2 fade-in">
+                      {accountEvents.map(event => (
+                        <div key={event.id} className="grid grid-cols-[1fr_auto] gap-3 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-900">
+                          <div>
+                            <div className="font-black text-slate-900 dark:text-white">{event.type}</div>
+                            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{event.date} · {event.detail}</div>
+                          </div>
+                          <span className={cx('self-start rounded-full px-2 py-0.5 text-[10px] font-black', statusTone(event.status))}>{event.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {activityTab === 'orders' && (
+                    <div className="space-y-4 fade-in">
+                      {[
+                        { title: 'Aktif Emirler', rows: activeOrders },
+                        { title: 'Tamamlanan Emirler', rows: completedOrders }
+                      ].map(section => (
+                        <div key={section.title}>
+                          <div className="mb-2 flex items-center justify-between">
+                            <h4 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400">{section.title}</h4>
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-500 dark:bg-slate-900 dark:text-slate-300">{section.rows.length}</span>
+                          </div>
+                          <div className="space-y-2">
+                            {section.rows.map(order => (
+                              <div key={order.id} className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-900">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="font-black text-slate-900 dark:text-white">{order.pair} · {order.side}</div>
+                                    <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{order.date} · {order.type} · {order.amount}</div>
+                                  </div>
+                                  <span className={cx('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black', statusTone(order.status))}>{order.status}</span>
+                                </div>
+                                <div className="mt-2 rounded-lg bg-white px-3 py-2 text-xs font-bold text-slate-600 dark:bg-slate-950 dark:text-slate-300">Fiyat: {order.price}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -7840,7 +7965,9 @@
             id: generateId('forward-note'),
             sender: 'note',
             time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-            text: `Gruba yönlendirildi: ${payload.group}${payload.note ? ` · Not: ${payload.note}` : ''}`
+            text: `Gruba yönlendirildi: ${payload.group}${payload.note ? ` · Not: ${payload.note}` : ''}`,
+            agentName: currentAgent.name,
+            agentAvatar: currentAgent.avatar || getInitials(currentAgent.name)
           } : null;
           return {
             ...row,
@@ -7861,7 +7988,9 @@
             id: generateId('hold-note'),
             sender: 'note',
             time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-            text: `Bekletme: ${payload.reason} · Takip: ${payload.followUp}`
+            text: `Bekletme: ${payload.reason} · Takip: ${payload.followUp}`,
+            agentName: currentAgent.name,
+            agentAvatar: currentAgent.avatar || getInitials(currentAgent.name)
           } : null;
           return {
             ...row,
@@ -7900,7 +8029,9 @@
           id: generateId('link-note'),
           sender: 'note',
           time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-          text: `İlişkili talep eklendi: ${relation.source} #${relation.id} - ${relation.subject}`
+          text: `İlişkili talep eklendi: ${relation.source} #${relation.id} - ${relation.subject}`,
+          agentName: currentAgent.name,
+          agentAvatar: currentAgent.avatar || getInitials(currentAgent.name)
         } : null;
         return {
           ...item,
